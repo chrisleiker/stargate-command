@@ -1393,7 +1393,8 @@ function toggleIris() {
   state.irisClosed = !state.irisClosed;
   localStorage.setItem('sgc.iris', state.irisClosed ? 'closed' : 'open');
   applyIrisLabel();
-  gate.setIris(state.irisClosed, 620);
+  // match the blade animation to the iris open/close sfx length (~3.5s)
+  gate.setIris(state.irisClosed, 3500);
   sfx.iris(state.irisClosed);
   log(state.irisClosed ? 'IRIS CLOSED — GATE SEALED' : 'IRIS OPEN', state.irisClosed ? 'lock' : 'ok');
 }
