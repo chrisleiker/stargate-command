@@ -37,5 +37,4 @@ contextBridge.exposeInMainWorld('gateHost', {
 
   // Fired when background work (icon extraction) has changed the catalog.
   onCatalogUpdated: (fn) => ipcRenderer.on('catalog:updated', (_e, data) => fn(data)),
-  onStreamDeckInput: (fn) => ipcRenderer.on('streamdeck:input', (_e, input) => fn(input)),
 });

@@ -26,7 +26,6 @@ const { spawn } = require('child_process');
 
 const { createCatalog } = require('./lib/catalog');
 const { launchApp } = require('./lib/launcher');
-const { writeAppList } = require('./lib/app-list');
 
 const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, 'public');
@@ -34,6 +33,9 @@ const DATA_DIR = path.join(ROOT, 'data');
 
 const IS_WIN32 = process.platform === 'win32';
 const IS_MAC = process.platform === 'darwin';
+
+// The per-platform "hand this to the desktop" command.
+const OPEN_CMD = IS_WIN32 ? 'explorer.exe' : IS_MAC ? 'open' : 'xdg-open';
 
 const TOKEN = crypto.randomBytes(24).toString('hex');
 const CATALOG_MAX_AGE_MS = 1000 * 60 * 60 * 12; // rescan twice a day
@@ -57,12 +59,13 @@ const catalog = createCatalog(DATA_DIR, { maxAgeMs: CATALOG_MAX_AGE_MS });
 
 /*
  * Hand a URL or file to the desktop's default handler. On Windows that is
- * explorer.exe (the same path a double-click takes); on Linux, xdg-open.
+ * explorer.exe (the same path a double-click takes); on macOS, open; on
+ * Linux, xdg-open.
  * Resolves null on success, an error string on failure — the contract
  * launchApp expects from its shellOpen callback.
  */
 function shellOpen(target) {
-  const cmd = IS_WIN32 ? 'explorer.exe' : IS_MAC ? 'open' : 'xdg-open';
+  const cmd = OPEN_CMD;
   return new Promise((resolve) => {
     let child;
     try {
@@ -79,7 +82,7 @@ function shellOpen(target) {
 function openExternal(url) {
   // launchApp awaits openExternal and treats a rejection as a launch failure,
   // matching Electron's shell.openExternal semantics.
-  const cmd = IS_WIN32 ? 'explorer.exe' : IS_MAC ? 'open' : 'xdg-open';
+  const cmd = OPEN_CMD;
   return new Promise((resolve, reject) => {
     let child;
     try {
@@ -208,13 +211,11 @@ const server = http.createServer(async (req, res) => {
       } catch (e) {
         if (!catalog.apps.length) return sendJson(res, 500, { error: e.message });
       }
-      writeAppList(catalog.apps);
       return sendJson(res, 200, catalog.toClientList());
     }
 
     if (route === '/api/rescan' && req.method === 'POST') {
       await catalog.ensure(true);
-      writeAppList(catalog.apps);
       return sendJson(res, 200, catalog.toClientList());
     }
 
@@ -289,7 +290,7 @@ function openInBrowser(url) {
     }
     return;
   }
-  const child = spawn('xdg-open', [url], { detached: true, stdio: 'ignore' });
+  const child = spawn(OPEN_CMD, [url], { detached: true, stdio: 'ignore' });
   child.on('error', () => {
     console.log('  (could not open a browser — visit ' + url + ' yourself)');
   });
